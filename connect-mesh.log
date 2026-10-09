@@ -304,3 +304,42 @@ Report:
 2026-10-09 20:16:06,575 INFO Tailscale backend=Running; peer=DESKTOP-JJIF7LF ips=100.64.0.1,fd7a:115c:a1e0::1 route=DERP(waw) active=False online=True tx=388 rx=500
 2026-10-09 20:16:32,200 INFO Starting mesh diagnostics; log file=C:\Users\tomas\Desktop\koud\repos\connect\connect-mesh.log; peer=all peers
 2026-10-09 20:16:32,246 INFO Tailscale backend=Running; peer=DESKTOP-JJIF7LF ips=100.64.0.1,fd7a:115c:a1e0::1 route=DERP(waw) active=False online=True tx=388 rx=500
+2026-10-09 20:16:35,688 INFO Tailscale netcheck:
+Report:
+	* Time: 2026-10-09 20:16:35.6665669+02:00
+	* UDP: true
+	* IPv4: yes, 5.173.202.35:55181
+	* IPv6: no, but OS has support
+	* MappingVariesByDestIP: false
+	* PortMapping: 
+	* CaptivePortal: false
+	* Nearest DERP: Warsaw
+	* DERP latency:
+		- waw: 64.7ms  (Warsaw)
+		- fra: 86.8ms  (Frankfurt)
+		- ams: 86.8ms  (Amsterdam)
+		- nue: 86.8ms  (Nuremberg)
+		- hel: 86.8ms  (Helsinki)
+		- lhr: 87.3ms  (London)
+		- mad: 89.8ms  (Madrid)
+		- par: 97ms    (Paris)
+		- nyc: 161.5ms (New York City)
+		- tor: 167.2ms (Toronto)
+		- iad: 167.2ms (Ashburn)
+		- ord: 167.8ms (Chicago)
+		- dbi: 185.9ms (Dubai)
+		- mia: 186.2ms (Miami)
+		- den: 186.8ms (Denver)
+		- blr: 188.2ms (Bengaluru)
+		- dfw: 193ms   (Dallas)
+		- sfo: 204.9ms (San Francisco)
+		- sea: 205.7ms (Seattle)
+		- lax: 206.4ms (Los Angeles)
+		- nai: 206.4ms (Nairobi)
+		- jnb: 232.7ms (Johannesburg)
+		- hkg: 244.3ms (Hong Kong)
+		- hnl: 256.5ms (Honolulu)
+		- sao: 289.6ms (SĂŁo Paulo)
+		- sin: 297.8ms (Singapore)
+		- tok: 321.2ms (Tokyo)
+		- syd: 336.2ms (Sydney)
