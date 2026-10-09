@@ -171,3 +171,50 @@ Report:
 2026-10-09 18:55:40,130 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=False online=True tx=524 rx=396
 2026-10-09 18:55:55,158 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=True online=True tx=668 rx=572
 2026-10-09 18:56:10,194 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=True online=True tx=668 rx=572
+2026-10-09 18:57:11,651 INFO Starting mesh diagnostics; log file=C:\Users\tomas\Desktop\koud\repos\connect\connect-mesh.log; peer=all peers
+2026-10-09 18:57:11,775 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=False online=True tx=756 rx=604
+2026-10-09 18:57:13,442 INFO Tailscale netcheck:
+Report:
+	* Time: 2026-10-09 18:57:13.4365632+02:00
+	* UDP: true
+	* IPv4: yes, 46.113.2.21:23765
+	* IPv6: no, but OS has support
+	* MappingVariesByDestIP: false
+	* PortMapping: UPnP
+	* CaptivePortal: false
+	* Nearest DERP: Warsaw
+	* DERP latency:
+		- waw: 33.4ms  (Warsaw)
+		- ams: 62.3ms  (Amsterdam)
+		- fra: 69.4ms  (Frankfurt)
+		- nue: 70.5ms  (Nuremberg)
+		- hel: 73ms    (Helsinki)
+		- lhr: 82.3ms  (London)
+		- par: 86.4ms  (Paris)
+		- mad: 88.4ms  (Madrid)
+		- nyc: 127.8ms (New York City)
+		- iad: 143.5ms (Ashburn)
+		- ord: 145.3ms (Chicago)
+		- tor: 150.1ms (Toronto)
+		- mia: 160.6ms (Miami)
+		- den: 162.3ms (Denver)
+		- dbi: 164ms   (Dubai)
+		- nai: 182.3ms (Nairobi)
+		- lax: 184.9ms (Los Angeles)
+		- dfw: 185.8ms (Dallas)
+		- sfo: 190.5ms (San Francisco)
+		- blr: 190.7ms (Bengaluru)
+		- sea: 194ms   (Seattle)
+		- jnb: 224.3ms (Johannesburg)
+		- hkg: 238.6ms (Hong Kong)
+		- hnl: 244.1ms (Honolulu)
+		- sin: 280.4ms (Singapore)
+		- sao: 283.3ms (SĂŁo Paulo)
+		- tok: 296.5ms (Tokyo)
+		- syd: 314.7ms (Sydney)
+2026-10-09 18:57:28,474 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=False online=True tx=756 rx=604
+2026-10-09 18:57:43,502 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=True online=True tx=1104 rx=1024
+2026-10-09 18:57:58,530 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=True online=True tx=1104 rx=1024
+2026-10-09 18:58:13,569 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=True online=True tx=1104 rx=1024
+2026-10-09 18:58:28,595 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=False online=True tx=1104 rx=1024
+2026-10-09 18:58:43,633 INFO Tailscale backend=Running; peer=LAPTOP-2GQ8S5LP ips=100.64.0.2,fd7a:115c:a1e0::2 route=DERP(waw) active=False online=True tx=1104 rx=1024
