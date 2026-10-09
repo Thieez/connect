@@ -19,19 +19,11 @@ encrypted fallback, and clients can still attempt direct WireGuard connections
 to each other. If direct connectivity fails, packets go through DERP. Headscale
 and its clients do not require a paid Tailscale control-plane subscription.
 
-In Render, create a Blueprint using `headscale/render.yaml` from this
-repository. Wait until `https://connect-headscale.onrender.com/health` returns
-HTTP 200. Open the service Shell and create a user and a separate one-time
-preauth key for each device:
-
-```sh
-headscale users create connect
-headscale users list
-headscale preauthkeys create --user USER_ID
-```
-
-Use the service Shell again to approve any devices that use interactive
-registration. Never put a reusable auth key in the repository.
+The Render container automatically creates the `connect` user and two
+single-use preauth keys at startup. Find `CONNECT_DEVICE_1_AUTHKEY` and
+`CONNECT_DEVICE_2_AUTHKEY` in the service's runtime logs. They expire after
+24 hours; treat them as passwords and do not share or commit them. A service
+restart may create fresh keys.
 
 ## Join Windows clients to the Render control plane
 
