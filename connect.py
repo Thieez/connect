@@ -153,6 +153,18 @@ def parse_args():
         help="wspólny, prywatny kod pokoju relay (8-64 znaków)",
     )
     parser.add_argument(
+        "--p2p-relay",
+        metavar="URL",
+        help="serwer sygnalizacyjny dla WebRTC, np. https://connect-relay.onrender.com",
+    )
+    parser.add_argument(
+        "--turn-server",
+        metavar="URL",
+        help="opcjonalny serwer TURN, np. turn:turn.example.com:3478",
+    )
+    parser.add_argument("--turn-username", help="nazwa użytkownika serwera TURN")
+    parser.add_argument("--turn-password", help="hasło serwera TURN")
+    parser.add_argument(
         "--host",
         default="0.0.0.0",
         help="adres nasłuchiwania (domyślnie 0.0.0.0)",
@@ -164,15 +176,42 @@ def parse_args():
         help="port TCP dla obu węzłów (domyślnie 8765)",
     )
     args = parser.parse_args()
-    if bool(args.relay) != bool(args.room):
-        parser.error("--relay i --room muszą być podane razem")
+    if bool(args.relay or args.p2p_relay) != bool(args.room):
+        parser.error("--relay lub --p2p-relay i --room muszą być podane razem")
     if args.relay and args.connect:
         parser.error("--relay nie może być używane razem z --connect")
+    if args.p2p_relay and (args.relay or args.connect):
+        parser.error("--p2p-relay nie może być używane razem z --relay ani --connect")
+    if args.p2p_relay and not args.room:
+        parser.error("--p2p-relay wymaga podania --room")
+    if any((args.turn_server, args.turn_username, args.turn_password)) and not all(
+        (args.p2p_relay, args.turn_server, args.turn_username, args.turn_password)
+    ):
+        parser.error(
+            "konfiguracja TURN wymaga --p2p-relay, --turn-server, "
+            "--turn-username i --turn-password"
+        )
     return args
 
 
 def main():
     args = parse_args()
+    if args.p2p_relay:
+        from p2p_client import run_p2p
+
+        try:
+            run_p2p(
+                args.p2p_relay,
+                args.room,
+                args.turn_server,
+                args.turn_username,
+                args.turn_password,
+            )
+        except (OSError, ValueError, RuntimeError) as error:
+            raise SystemExit(
+                f"Nie udało się uruchomić połączenia WebRTC: {error}"
+            ) from error
+        return
     if args.relay:
         try:
             run_relay(args.relay, args.room)

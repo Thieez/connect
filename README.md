@@ -11,7 +11,7 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
 ```
 
-Zależności obejmują serwer relay oraz klienta WebSocket. Środowisko `.venv`
+Zależności obejmują serwer relay, klienta WebSocket i WebRTC. Środowisko `.venv`
 jest lokalne i nie należy go kopiować ani commitować; na drugim urządzeniu
 utwórz je osobno tymi samymi poleceniami.
 
@@ -36,9 +36,43 @@ Wpisz wiadomość i naciśnij Enter; `/quit` kończy działanie programu.
 
 Urządzenia muszą mieć wzajemną łączność sieciową, a zapora musi zezwalać na
 połączenia przychodzące TCP na używanym porcie. Połączenie przez Internet może
-wymagać przekierowania portu TCP na routerze. Program nie zapewnia
-automatycznego przechodzenia przez NAT, szyfrowania ani uwierzytelniania;
-używaj go tylko w zaufanej sieci.
+wymagać przekierowania portu TCP na routerze. Klasyczny tryb TCP (`--connect`)
+nie zapewnia automatycznego przechodzenia przez NAT, szyfrowania ani
+uwierzytelniania; używaj go tylko w zaufanej sieci.
+
+## Bezpośrednie połączenie dla różnych sieci i CGNAT
+
+Aby ograniczyć ruch przez serwer, oba urządzenia mogą użyć WebRTC. Serwer
+sygnalizacyjny przekazuje tylko opis połączenia; po udanym ICE wiadomości
+przesyłane są bezpośrednim, szyfrowanym kanałem danych. Program domyślnie
+korzysta z publicznego serwera STUN, aby wykryć publiczne adresy. STUN nie
+przekazuje wiadomości.
+
+Na obu urządzeniach wygeneruj ten sam kod pokoju:
+
+```powershell
+py -3 -c "import secrets; print(secrets.token_urlsafe(16))"
+```
+
+Następnie uruchom klienta na obu urządzeniach z adresem serwera i wspólnym
+kodem:
+
+```powershell
+.\.venv\Scripts\python.exe .\connect.py --p2p-relay https://connect-relay.onrender.com --room WKLEJ_TUTAJ_KOD
+```
+
+Jeśli bezpośrednie połączenie nie powiedzie się (np. przez restrykcyjny CGNAT),
+program automatycznie przełączy wiadomości na relay przez ten sam serwer.
+Można skonfigurować dodatkowy serwer TURN, aby ICE mógł spróbować połączenia
+przez TURN przed przejściem na relay aplikacji:
+
+```powershell
+.\.venv\Scripts\python.exe .\connect.py --p2p-relay https://connect-relay.onrender.com --room WKLEJ_TUTAJ_KOD --turn-server turn:turn.example.com:3478 --turn-username UZYTKOWNIK --turn-password HASLO
+```
+
+Połączenie bezpośrednie nie jest gwarantowane: zależy od NAT, zapór i sieci.
+Gdy wykorzystany jest TURN albo fallback WebSocket, odpowiedni ruch przechodzi
+przez serwer pośredniczący.
 
 ## Relay dla różnych sieci i CGNAT
 
@@ -56,7 +90,8 @@ py -3 -c "import secrets; print(secrets.token_urlsafe(16))"
 ```
 
 Uruchom klienta na obu urządzeniach, podając adres wdrożonego serwera oraz ten
-sam kod pokoju:
+sam kod pokoju. Ten tryb zawsze przekazuje wiadomości przez serwer; użyj
+`--p2p-relay`, aby najpierw spróbować połączenia bezpośredniego.
 
 ```powershell
 .\.venv\Scripts\python.exe .\connect.py --relay https://connect-relay.onrender.com --room WKLEJ_TUTAJ_KOD
