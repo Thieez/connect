@@ -2,7 +2,23 @@
 
 import asyncio
 import json
+import os
 from urllib.parse import urlsplit
+
+DEFAULT_STUN_SERVERS = (
+    "stun:stun.l.google.com:19302",
+    "stun:stun.cloudflare.com:3478",
+)
+ICE_CONNECTION_TIMEOUT_SECONDS = 45
+
+
+def _stun_server_urls():
+    configured = [
+        server.strip()
+        for server in os.environ.get("CONNECT_STUN_SERVERS", "").split(",")
+        if server.strip()
+    ]
+    return configured or list(DEFAULT_STUN_SERVERS)
 
 
 def run_p2p(
@@ -31,7 +47,7 @@ async def _run_p2p(relay_url, room_code, turn_server, turn_username, turn_passwo
 
     path = parsed_url.path.rstrip("/") + f"/p2p/{room_code}"
     endpoint = parsed_url._replace(scheme=scheme, path=path).geturl()
-    ice_servers = [RTCIceServer(urls="stun:stun.l.google.com:19302")]
+    ice_servers = [RTCIceServer(urls=server) for server in _stun_server_urls()]
     if turn_server:
         ice_servers.append(
             RTCIceServer(
@@ -56,10 +72,22 @@ async def _run_p2p(relay_url, room_code, turn_server, turn_username, turn_passwo
         shutting_down = asyncio.Event()
         send_lock = asyncio.Lock()
         data_channel = None
+        connection_timeout = None
 
         async def send_signal(message):
             async with send_lock:
                 await signaling.send(json.dumps(message))
+
+        async def wait_for_direct_connection():
+            try:
+                await asyncio.wait_for(
+                    channel_ready.wait(), timeout=ICE_CONNECTION_TIMEOUT_SECONDS
+                )
+            except asyncio.TimeoutError:
+                use_fallback(
+                    "Nie udało się zestawić kanału WebRTC w "
+                    f"{ICE_CONNECTION_TIMEOUT_SECONDS} s."
+                )
 
         async def notify_fallback():
             try:
@@ -67,13 +95,13 @@ async def _run_p2p(relay_url, room_code, turn_server, turn_username, turn_passwo
             except websockets.exceptions.WebSocketException as error:
                 print(f"\nNie udało się zgłosić trybu relay: {error}")
 
-        def use_fallback():
+        def use_fallback(reason):
             if fallback.is_set() or shutting_down.is_set():
                 return
             fallback.set()
             print(
-                "\nNie udało się uzyskać bezpośredniego połączenia; "
-                "wiadomości będą przekazywane przez serwer."
+                f"\n{reason} Wiadomości będą przekazywane przez serwer. "
+                "Bezpośrednie P2P przez CGNAT może wymagać TURN."
             )
             asyncio.create_task(notify_fallback())
 
@@ -107,16 +135,28 @@ async def _run_p2p(relay_url, room_code, turn_server, turn_username, turn_passwo
 
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
+            print(f"\nStan połączenia WebRTC: {pc.connectionState}")
             if pc.connectionState == "failed":
-                use_fallback()
+                use_fallback("WebRTC zgłosił błąd zestawiania połączenia.")
+
+        @pc.on("iceconnectionstatechange")
+        async def on_iceconnectionstatechange():
+            print(f"\nStan ICE: {pc.iceConnectionState}")
+            if pc.iceConnectionState == "failed":
+                use_fallback("Negocjacja ICE nie znalazła osiągalnej trasy P2P.")
 
         async def receive_signals():
+            nonlocal connection_timeout
             try:
                 async for raw_message in signaling:
                     event = json.loads(raw_message)
                     event_type = event.get("type")
                     try:
                         if event_type == "ready":
+                            if connection_timeout is None:
+                                connection_timeout = asyncio.create_task(
+                                    wait_for_direct_connection()
+                                )
                             if event.get("initiator"):
                                 attach_channel(pc.createDataChannel("chat"))
                                 offer = await pc.createOffer()
@@ -178,6 +218,8 @@ async def _run_p2p(relay_url, room_code, turn_server, turn_username, turn_passwo
                 print(f"\nPołączenie sygnalizacyjne zostało przerwane: {error}")
             finally:
                 shutting_down.set()
+                if connection_timeout:
+                    connection_timeout.cancel()
                 await pc.close()
 
         receiver = asyncio.create_task(receive_signals())

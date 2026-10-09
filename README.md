@@ -45,8 +45,12 @@ uwierzytelniania; używaj go tylko w zaufanej sieci.
 Aby ograniczyć ruch przez serwer, oba urządzenia mogą użyć WebRTC. Serwer
 sygnalizacyjny przekazuje tylko opis połączenia; po udanym ICE wiadomości
 przesyłane są bezpośrednim, szyfrowanym kanałem danych. Program domyślnie
-korzysta z publicznego serwera STUN, aby wykryć publiczne adresy. STUN nie
-przekazuje wiadomości.
+korzysta z publicznych serwerów STUN Google i Cloudflare, aby wykryć publiczne
+adresy i spróbować zestawić bezpośrednie połączenie. Jeśli jeden z nich jest
+blokowany, można ustawić własną listę rozdzieloną przecinkami w zmiennej
+`CONNECT_STUN_SERVERS`, np. `stun:stun.example.net:3478`. STUN nie przekazuje
+wiadomości. Po dołączeniu obu peerów klient pokazuje stany ICE/WebRTC; po 45
+sekundach bez kanału danych automatycznie przełącza się na relay.
 
 Na obu urządzeniach wygeneruj ten sam kod pokoju:
 
@@ -71,8 +75,11 @@ przez TURN przed przejściem na relay aplikacji:
 ```
 
 Połączenie bezpośrednie nie jest gwarantowane: zależy od NAT, zapór i sieci.
-Gdy wykorzystany jest TURN albo fallback WebSocket, odpowiedni ruch przechodzi
-przez serwer pośredniczący.
+Serwer Render pomaga peerom się odnaleźć i wymienić sygnalizację, ale nie może
+wymusić bezpośredniej trasy przez restrykcyjny lub symetryczny CGNAT. W takim
+przypadku może być potrzebny serwer TURN; TURN przekazuje ruch przez serwer
+TURN, więc nie jest połączeniem bezpośrednim. Jeśli TURN nie jest
+skonfigurowany, aplikacja przełącza wiadomości na relay przez Render.
 
 ## Relay dla różnych sieci i CGNAT
 
