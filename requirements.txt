@@ -1,1 +1,3 @@
-# Connect currently uses only Python's standard library.
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+websocket-client>=1.8,<2
