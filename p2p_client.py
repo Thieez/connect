@@ -3,22 +3,45 @@
 import asyncio
 import json
 import os
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
+from urllib.request import Request, urlopen
 
-DEFAULT_STUN_SERVERS = (
-    "stun:stun.l.google.com:19302",
-    "stun:stun.cloudflare.com:3478",
-)
+DEFAULT_STUN_SERVER = "stun:stun.l.google.com:19302"
 ICE_CONNECTION_TIMEOUT_SECONDS = 45
 
 
-def _stun_server_urls():
-    configured = [
-        server.strip()
-        for server in os.environ.get("CONNECT_STUN_SERVERS", "").split(",")
-        if server.strip()
-    ]
-    return configured or list(DEFAULT_STUN_SERVERS)
+def _stun_server_url():
+    return os.environ.get("CONNECT_STUN_SERVER", "").strip() or DEFAULT_STUN_SERVER
+
+
+def _cloudflare_turn_credentials(key_id, api_token):
+    request = Request(
+        "https://rtc.live.cloudflare.com/v1/turn/keys/"
+        f"{quote(key_id, safe='')}/credentials/generate-ice-servers",
+        data=json.dumps({"ttl": 3600}).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            payload = json.loads(response.read())
+    except (OSError, ValueError) as error:
+        raise RuntimeError(
+            "Nie udało się pobrać tymczasowych danych TURN z Cloudflare."
+        ) from error
+
+    servers = payload.get("iceServers") if isinstance(payload, dict) else None
+    if not isinstance(servers, list) or not servers:
+        raise RuntimeError("Cloudflare nie zwrócił serwerów ICE dla TURN.")
+    if any(
+        not isinstance(server, dict) or not server.get("urls")
+        for server in servers
+    ):
+        raise RuntimeError("Cloudflare zwrócił nieprawidłową konfigurację TURN.")
+    return servers
 
 
 def run_p2p(
@@ -45,9 +68,29 @@ async def _run_p2p(relay_url, room_code, turn_server, turn_username, turn_passwo
     if turn_server and not (turn_username and turn_password):
         raise ValueError("Serwer TURN wymaga nazwy użytkownika i hasła")
 
+    turn_key_id = os.environ.get("CLOUDFLARE_TURN_KEY_ID")
+    turn_api_token = os.environ.get("CLOUDFLARE_TURN_API_TOKEN")
+    if bool(turn_key_id) != bool(turn_api_token):
+        raise ValueError(
+            "Ustaw obie zmienne CLOUDFLARE_TURN_KEY_ID i "
+            "CLOUDFLARE_TURN_API_TOKEN, aby użyć Cloudflare TURN."
+        )
+
     path = parsed_url.path.rstrip("/") + f"/p2p/{room_code}"
     endpoint = parsed_url._replace(scheme=scheme, path=path).geturl()
-    ice_servers = [RTCIceServer(urls=server) for server in _stun_server_urls()]
+    ice_servers = [RTCIceServer(urls=_stun_server_url())]
+    if turn_key_id and turn_api_token:
+        turn_servers = await asyncio.to_thread(
+            _cloudflare_turn_credentials, turn_key_id, turn_api_token
+        )
+        for server in turn_servers:
+            ice_servers.append(
+                RTCIceServer(
+                    urls=server["urls"],
+                    username=server.get("username"),
+                    credential=server.get("credential"),
+                )
+            )
     if turn_server:
         ice_servers.append(
             RTCIceServer(

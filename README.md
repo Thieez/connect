@@ -45,10 +45,10 @@ uwierzytelniania; używaj go tylko w zaufanej sieci.
 Aby ograniczyć ruch przez serwer, oba urządzenia mogą użyć WebRTC. Serwer
 sygnalizacyjny przekazuje tylko opis połączenia; po udanym ICE wiadomości
 przesyłane są bezpośrednim, szyfrowanym kanałem danych. Program domyślnie
-korzysta z publicznych serwerów STUN Google i Cloudflare, aby wykryć publiczne
-adresy i spróbować zestawić bezpośrednie połączenie. Jeśli jeden z nich jest
-blokowany, można ustawić własną listę rozdzieloną przecinkami w zmiennej
-`CONNECT_STUN_SERVERS`, np. `stun:stun.example.net:3478`. STUN nie przekazuje
+korzysta z publicznego STUN Google, aby wykryć publiczne adresy i spróbować
+zestawić bezpośrednie połączenie. Biblioteka aiortc używana przez klienta
+obsługuje jeden serwer STUN na próbę; można go zmienić zmienną
+`CONNECT_STUN_SERVER`, np. `stun:stun.cloudflare.com:3478`. STUN nie przekazuje
 wiadomości. Po dołączeniu obu peerów klient pokazuje stany ICE/WebRTC; po 45
 sekundach bez kanału danych automatycznie przełącza się na relay.
 
@@ -67,19 +67,70 @@ kodem:
 
 Jeśli bezpośrednie połączenie nie powiedzie się (np. przez restrykcyjny CGNAT),
 program automatycznie przełączy wiadomości na relay przez ten sam serwer.
-Można skonfigurować dodatkowy serwer TURN, aby ICE mógł spróbować połączenia
-przez TURN przed przejściem na relay aplikacji:
+Jeśli masz własny serwer TURN, możesz podać go bezpiecznie przez zmienne
+środowiskowe zamiast umieszczać hasło w historii poleceń:
 
 ```powershell
-.\.venv\Scripts\python.exe .\connect.py --p2p-relay https://connect-relay.onrender.com --room WKLEJ_TUTAJ_KOD --turn-server turn:turn.example.com:3478 --turn-username UZYTKOWNIK --turn-password HASLO
+$env:TURN_SERVER = "turn:turn.example.com:3478"
+$env:TURN_USERNAME = "UZYTKOWNIK"
+$env:TURN_PASSWORD = "HASLO"
+```
+
+Uruchom klienta z tymi samymi ustawieniami TURN na obu komputerach:
+
+```powershell
+.\.venv\Scripts\python.exe .\connect.py --p2p-relay https://connect-relay.onrender.com --room WKLEJ_TUTAJ_KOD --turn-server $env:TURN_SERVER --turn-username $env:TURN_USERNAME --turn-password $env:TURN_PASSWORD
 ```
 
 Połączenie bezpośrednie nie jest gwarantowane: zależy od NAT, zapór i sieci.
 Serwer Render pomaga peerom się odnaleźć i wymienić sygnalizację, ale nie może
 wymusić bezpośredniej trasy przez restrykcyjny lub symetryczny CGNAT. W takim
-przypadku może być potrzebny serwer TURN; TURN przekazuje ruch przez serwer
-TURN, więc nie jest połączeniem bezpośrednim. Jeśli TURN nie jest
-skonfigurowany, aplikacja przełącza wiadomości na relay przez Render.
+przypadku skonfiguruj Cloudflare Realtime TURN: utwórz klucz TURN i token API
+z uprawnieniem do generowania poświadczeń TURN. Ustaw na obu komputerach
+zmienne środowiskowe (tokenu nie wklejaj do repozytorium):
+
+```powershell
+$env:CLOUDFLARE_TURN_KEY_ID = "ID_KLUCZA_TURN"
+$env:CLOUDFLARE_TURN_API_TOKEN = "TOKEN_API"
+```
+
+Klient pobierze z Cloudflare tymczasowe poświadczenia ważne godzinę i użyje
+ich przy negocjacji ICE. Szczegóły konfiguracji są w
+[dokumentacji Cloudflare TURN](https://developers.cloudflare.com/realtime/turn/).
+TURN może pomóc połączyć urządzenia zza restrykcyjnego CGNAT, ale przekazuje
+ruch przez serwer TURN — to nie jest bezpośredni transfer między komputerami.
+Cloudflare nalicza opłatę za transfer TURN, jeśli nie jest używany z ich SFU.
+Bez TURN aplikacja po 45 sekundach przełącza wiadomości przez relay Render.
+
+## Alternatywa: prywatna sieć WireGuard przez Headscale
+
+Jeśli celem jest prywatne połączenie urządzeń, a niekoniecznie kanał WebRTC,
+możesz uruchomić własny Headscale i użyć go jako control plane dla klienta
+Tailscale. Nie wymaga to płatnego konta/control plane Tailscale, ale wymaga
+własnego serwera. Instrukcja zawiera wariant Render (płatny Starter i trwały
+dysk; Render nie zapewnia własnego UDP-STUN/DERP) oraz wariant VPS z własnym
+UDP-STUN/DERP: [`headscale/README.md`](headscale/README.md).
+
+Po dołączeniu obu urządzeń do własnej sieci Headscale sprawdź adres komputera
+serwerowego poleceniem `tailscale ip -4`.
+
+Na pierwszym komputerze uruchom serwer czatu:
+
+```powershell
+.\.venv\Scripts\python.exe .\connect.py --port 8765
+```
+
+Na drugim połącz się z adresem Tailscale pierwszego:
+
+```powershell
+.\.venv\Scripts\python.exe .\connect.py --connect 100.x.y.z --port 8765
+```
+
+Zezwól na połączenia TCP na porcie `8765` w zaporze systemu Windows dla
+interfejsu Tailscale. `tailscale ping NAZWA_URZADZENIA` pokaże, czy trasa jest
+`direct`, czy przechodzi przez DERP. Gdy jest `direct`, ruch aplikacji biegnie
+zaszyfrowanym tunelem WireGuard między urządzeniami; w przeciwnym razie jest
+przekazywany przez DERP.
 
 ## Relay dla różnych sieci i CGNAT
 
