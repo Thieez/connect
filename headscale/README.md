@@ -59,6 +59,7 @@ PowerShell on the first computer:
 
 ```powershell
 New-NetFirewallRule -DisplayName "Connect over Headscale" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 -RemoteAddress 100.64.0.0/10
+New-NetFirewallRule -DisplayName "Tailscale direct UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 41641
 ```
 
 Run `tailscale ping DEVICE_NAME` to check the route. A `direct` response means
@@ -145,6 +146,7 @@ restricted to Tailscale's address range:
 
 ```powershell
 New-NetFirewallRule -DisplayName "Connect over Headscale" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8765 -RemoteAddress 100.64.0.0/10
+New-NetFirewallRule -DisplayName "Tailscale direct UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 41641
 ```
 
 Check the route with `tailscale ping DEVICE_NAME`. A `direct` response means
@@ -152,3 +154,11 @@ WireGuard traffic goes between the computers. A `via DERP(...)` response
 means it is encrypted but relayed. Headscale improves coordination and offers
 a self-hosted relay, but no coordination system can guarantee a direct path
 through every symmetric/restrictive CGNAT or firewall.
+
+If the route remains `via DERP(...)`, run `tailscale netcheck` on both
+computers. `UDP: true` is required but does not guarantee that the peer is
+reachable. If automatic router mapping does not work, reserve each computer's
+LAN IP and forward inbound UDP `41641` on its router to that computer; the
+Windows firewall rule above already allows this port. This may help with
+peer-to-peer connectivity, but cannot bypass carrier-grade NAT or networks
+that block UDP. In those cases, DERP is the expected encrypted fallback.

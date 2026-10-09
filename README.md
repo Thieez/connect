@@ -120,8 +120,31 @@ wychodzący. Tailscale domyślnie najpierw próbuje zestawić trasę bezpośredn
 UDP pomiędzy peerami; jeśli NAT/CGNAT na to nie pozwala, automatycznie używa
 zaszyfrowanego DERP. Klient wyłącza też opcję Tailscale „shields up”, która
 blokowałaby połączenia przychodzące. Zapora nie może usunąć ograniczeń
-narzuconych przez routera lub operatora. Dodaj `--no-headscale`, aby wyłączyć
-automatyczne dołączenie do mesha.
+narzuconych przez routera lub operatora. Jeśli połączenie nadal używa DERP,
+sprawdź `tailscale netcheck` na obu komputerach. `UDP: true` jest wymagane,
+ale samo nie gwarantuje bezpośredniej trasy. Jeśli router nie tworzy poprawnego
+mapowania automatycznie, zarezerwuj lokalny adres IP komputera i przekieruj
+na routerze UDP `41641` z Internetu do tego komputera; zrób to w sieci każdego
+peera. Reguła zapory Windows utworzona przez klienta już zezwala na ten port.
+Przekierowanie może pomóc, ale nie zadziała za CGNAT operatora ani przy
+restrykcjach sieci blokujących UDP — w takich przypadkach DERP jest
+oczekiwanym, szyfrowanym połączeniem awaryjnym. Dodaj `--no-headscale`, aby
+wyłączyć automatyczne dołączenie do mesha.
+
+Reguły zapory dla bezpośredniego Tailscale są tworzone automatycznie podczas
+uruchamiania klienta Connect. Możesz je też skonfigurować i uruchomić
+diagnostykę ręcznie na każdym komputerze z PowerShell uruchomionego jako
+administrator:
+
+```powershell
+.\setup-tailscale-p2p.ps1
+```
+
+Skrypt otwiera w Zaporze Windows UDP `41641` i uruchamia `tailscale netcheck`.
+Nie zmienia konfiguracji routera. Jeśli test nadal pokazuje trasę przez DERP,
+zarezerwuj lokalny adres IP komputera i przekieruj UDP `41641` na routerze do
+tego adresu. Konfigurację routera trzeba wykonać osobno dla każdej sieci;
+przekierowanie nie zadziała za CGNAT ani przy blokadzie UDP.
 
 Przy pierwszym uruchomieniu zaakceptuj monit UAC i wklej jednorazowy klucz,
 gdy klient o niego poprosi. Na każdym urządzeniu użyj jego własnego klucza.
