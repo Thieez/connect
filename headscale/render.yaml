@@ -2,13 +2,9 @@ services:
   - type: web
     name: connect-headscale
     runtime: docker
-    plan: starter
+    plan: free
     region: oregon
     dockerfilePath: ./headscale/Dockerfile
     dockerContext: .
     autoDeployTrigger: commit
     healthCheckPath: /health
-    disk:
-      name: headscale-data
-      mountPath: /var/lib/headscale
-      sizeGB: 1

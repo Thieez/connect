@@ -7,11 +7,11 @@ DERP is a relay, so it is not a direct route.
 
 ## Deploy the control plane on Render
 
-`render.yaml` creates a Headscale web service at
-`https://connect-headscale.onrender.com`. The service uses a 1 GB persistent
-disk and the Render Starter plan, which is paid. Do not deploy the Blueprint
-unless you accept the current Render charge. A persistent disk is necessary
-to retain device registrations and server keys across deploys.
+`render.yaml` creates a free Headscale web service at
+`https://connect-headscale.onrender.com`. The free service has an ephemeral
+filesystem: its device database and private keys can be lost after a restart
+or redeploy. Treat this as a temporary connectivity test, not a durable
+control plane. Persistent storage on Render requires a paid plan.
 
 Render web services do not expose inbound UDP, so this deployment disables
 Headscale's embedded STUN/DERP. It still uses the public default DERP map for
