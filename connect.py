@@ -143,6 +143,19 @@ def parse_args():
         help="adres IP lub nazwa hosta drugiego urządzenia",
     )
     parser.add_argument(
+        "--headscale",
+        metavar="URL",
+        help=(
+            "użyj podanego serwera Tailscale/Headscale (domyślnie "
+            "https://connect-headscale.onrender.com)"
+        ),
+    )
+    parser.add_argument(
+        "--no-headscale",
+        action="store_true",
+        help="wyłącz domyślne połączenie przez sieć Headscale",
+    )
+    parser.add_argument(
         "--relay",
         metavar="URL",
         help="adres serwera relay, np. https://connect-relay.onrender.com",
@@ -176,8 +189,18 @@ def parse_args():
         help="port TCP dla obu węzłów (domyślnie 8765)",
     )
     args = parser.parse_args()
+    if args.no_headscale and args.headscale:
+        parser.error("--no-headscale nie może być używane razem z --headscale")
+    if not args.no_headscale and not (args.relay or args.p2p_relay):
+        from tailscale_client import DEFAULT_HEADSCALE_URL
+
+        args.headscale = args.headscale or DEFAULT_HEADSCALE_URL
     if bool(args.relay or args.p2p_relay) != bool(args.room):
         parser.error("--relay lub --p2p-relay i --room muszą być podane razem")
+    if args.headscale and (args.relay or args.p2p_relay):
+        parser.error(
+            "--headscale nie może być używane razem z --relay ani --p2p-relay"
+        )
     if args.relay and args.connect:
         parser.error("--relay nie może być używane razem z --connect")
     if args.p2p_relay and (args.relay or args.connect):
@@ -196,6 +219,17 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.headscale:
+        from tailscale_client import allow_mesh_inbound, connect_to_headscale
+
+        try:
+            connect_to_headscale(args.headscale)
+            allow_mesh_inbound(args.port)
+        except (OSError, ValueError, RuntimeError) as error:
+            raise SystemExit(
+                f"Nie udało się skonfigurować sieci Headscale: {error}"
+            ) from error
+
     if args.p2p_relay:
         from p2p_client import run_p2p
 

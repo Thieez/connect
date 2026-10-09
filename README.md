@@ -111,26 +111,42 @@ własnego serwera. Instrukcja zawiera wariant Render (płatny Starter i trwały
 dysk; Render nie zapewnia własnego UDP-STUN/DERP) oraz wariant VPS z własnym
 UDP-STUN/DERP: [`headscale/README.md`](headscale/README.md).
 
-Po dołączeniu obu urządzeń do własnej sieci Headscale sprawdź adres komputera
-serwerowego poleceniem `tailscale ip -4`.
+Domyślnie klient używa Headscale `https://connect-headscale.onrender.com`,
+dołącza Tailscale (jeśli to konieczne), pokazuje adres mesh i konfiguruje na
+Windowsie reguły Zapory wymagane przez połączenie: port czatu TCP dostępny
+tylko z podsieci `100.64.0.0/10`, domyślny port WireGuard UDP `41641`
+przychodzący i wychodzący, STUN UDP `3478` wychodzący oraz HTTPS TCP `443`
+wychodzący. Tailscale domyślnie najpierw próbuje zestawić trasę bezpośrednią
+UDP pomiędzy peerami; jeśli NAT/CGNAT na to nie pozwala, automatycznie używa
+zaszyfrowanego DERP. Klient wyłącza też opcję Tailscale „shields up”, która
+blokowałaby połączenia przychodzące. Zapora nie może usunąć ograniczeń
+narzuconych przez routera lub operatora. Dodaj `--no-headscale`, aby wyłączyć
+automatyczne dołączenie do mesha.
 
-Na pierwszym komputerze uruchom serwer czatu:
+Przy pierwszym uruchomieniu zaakceptuj monit UAC i wklej jednorazowy klucz,
+gdy klient o niego poprosi. Na każdym urządzeniu użyj jego własnego klucza.
+Reguły wymagają Windows PowerShell i uprawnień administratora; klient wyświetli
+monit UAC. Reguły UDP otwierają wyłącznie porty używane przez Tailscale.
+
+Na pierwszym komputerze uruchom serwer czatu (przy pierwszym uruchomieniu
+wklej jego własny jednorazowy klucz Headscale):
 
 ```powershell
 .\.venv\Scripts\python.exe .\connect.py --port 8765
 ```
 
-Na drugim połącz się z adresem Tailscale pierwszego:
+Na drugim komputerze użyj jego własnego klucza przy pierwszym uruchomieniu
+i podaj adres mesh pierwszego komputera:
 
 ```powershell
 .\.venv\Scripts\python.exe .\connect.py --connect 100.x.y.z --port 8765
 ```
 
-Zezwól na połączenia TCP na porcie `8765` w zaporze systemu Windows dla
-interfejsu Tailscale. `tailscale ping NAZWA_URZADZENIA` pokaże, czy trasa jest
-`direct`, czy przechodzi przez DERP. Gdy jest `direct`, ruch aplikacji biegnie
-zaszyfrowanym tunelem WireGuard między urządzeniami; w przeciwnym razie jest
-przekazywany przez DERP.
+Klient nie może wymusić trasy bezpośredniej: `tailscale ping 100.x.y.z` pokaże
+`direct`, jeśli NAT/firewalle na to pozwolą, albo `via DERP`, gdy połączenie
+jest przekazywane. Obie trasy są szyfrowane WireGuard; domyślny tryb Headscale
+dołącza klienta i konfiguruje potrzebne reguły Zapory Windows.
+Restrukcyjny CGNAT może nadal wymagać relay.
 
 ## Relay dla różnych sieci i CGNAT
 
