@@ -47,7 +47,7 @@ def _run_tailscale(executable, *args):
 
 def _is_connected_to_server(executable, server_url):
     try:
-        prefs = json.loads(_run_tailscale(executable, "debug", "prefs", "--json"))
+        prefs = json.loads(_run_tailscale(executable, "debug", "prefs"))
         status = json.loads(_run_tailscale(executable, "status", "--json"))
     except (RuntimeError, json.JSONDecodeError):
         return False

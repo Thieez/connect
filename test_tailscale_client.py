@@ -110,12 +110,18 @@ class TailscaleClientTests(unittest.TestCase):
                 json.dumps({"ControlURL": "https://connect-headscale.onrender.com/"}),
                 json.dumps({"BackendState": "Running"}),
             ],
-        ):
+        ) as run:
             self.assertTrue(
                 _is_connected_to_server(
                     "tailscale.exe", "https://connect-headscale.onrender.com"
                 )
             )
+
+        self.assertEqual(
+            run.call_args_list[0].args[1:],
+            ("debug", "prefs"),
+        )
+        self.assertEqual(run.call_args_list[1].args[1:], ("status", "--json"))
 
 
 if __name__ == "__main__":
