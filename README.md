@@ -4,24 +4,35 @@ Prosty czat peer-to-peer TCP. Program działa na obu urządzeniach: każdy węze
 nasłuchuje połączeń, a jeden z nich dodatkowo inicjuje połączenie z adresem IP
 drugiego.
 
-Wymagany jest Python 3; nie trzeba instalować dodatkowych pakietów.
+Wymagany jest Python 3. Utwórz środowisko wirtualne i zainstaluj zależności:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+```
+
+`requirements.txt` nie zawiera obecnie zewnętrznych pakietów — program
+korzysta wyłącznie z biblioteki standardowej Pythona. Środowisko `.venv` jest
+lokalne i nie należy go kopiować ani commitować; na drugim urządzeniu utwórz je
+osobno tymi samymi poleceniami.
 
 ## Uruchomienie
 
 Na pierwszym urządzeniu uruchom nasłuchiwanie:
 
 ```powershell
-python connect.py
+.\.venv\Scripts\python.exe .\connect.py
 ```
 
 Na drugim urządzeniu podaj aktualny adres IP pierwszego:
 
 ```powershell
-python connect.py --connect 192.168.1.20
+.\.venv\Scripts\python.exe .\connect.py --connect 192.168.1.20
 ```
 
 Oba węzły używają domyślnie portu TCP `8765`. W razie potrzeby ustaw ten sam
-port po obu stronach przez `--port`, np. `python connect.py --port 9000`.
+port po obu stronach przez `--port`, np.
+`.\.venv\Scripts\python.exe .\connect.py --port 9000`.
 Wpisz wiadomość i naciśnij Enter; `/quit` kończy działanie programu.
 
 Urządzenia muszą mieć wzajemną łączność sieciową, a zapora musi zezwalać na
