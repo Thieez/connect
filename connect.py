@@ -18,7 +18,16 @@ class PeerNode:
     def add_peer(self, connection, address, receive_in_thread=True):
         with self.lock:
             self.peers.add(connection)
-        print(f"\nPołączono z {address}. Możesz pisać.\n> ", end="", flush=True)
+        try:
+            remote = connection.getpeername()
+            local = connection.getsockname()
+            print(
+                f"\nTCP połączone: local={local[0]}:{local[1]} "
+                f"peer={remote[0]}:{remote[1]}."
+            )
+        except OSError as error:
+            print(f"\nNie udało się odczytać endpointu TCP dla {address}: {error}")
+        print(f"Połączono z {address}. Możesz pisać.\n> ", end="", flush=True)
         if receive_in_thread:
             threading.Thread(
                 target=self._receive, args=(connection, address), daemon=True
@@ -220,15 +229,22 @@ def parse_args():
 def main():
     args = parse_args()
     if args.headscale:
-        from tailscale_client import allow_mesh_inbound, connect_to_headscale
+        from tailscale_client import (
+            allow_mesh_inbound,
+            connect_to_headscale,
+            start_mesh_diagnostics,
+        )
 
         try:
             connect_to_headscale(args.headscale)
             allow_mesh_inbound(args.port)
+            mesh_diagnostics = start_mesh_diagnostics(args.connect)
         except (OSError, ValueError, RuntimeError) as error:
             raise SystemExit(
                 f"Nie udało się skonfigurować sieci Headscale: {error}"
             ) from error
+    else:
+        mesh_diagnostics = None
 
     if args.p2p_relay:
         from p2p_client import run_p2p
@@ -283,6 +299,8 @@ def main():
             node.remove_peer(peer)
         server.shutdown()
         server.server_close()
+        if mesh_diagnostics:
+            mesh_diagnostics.stop()
 
 
 if __name__ == "__main__":

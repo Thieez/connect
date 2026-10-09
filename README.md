@@ -128,6 +128,15 @@ gdy klient o niego poprosi. Na każdym urządzeniu użyj jego własnego klucza.
 Reguły wymagają Windows PowerShell i uprawnień administratora; klient wyświetli
 monit UAC. Reguły UDP otwierają wyłącznie porty używane przez Tailscale.
 
+Przy starcie klient zapisuje bieżący wynik `tailscale netcheck` oraz stan tras
+peerów co 15 sekund do `connect-mesh.log` i konsoli. Wpis `route=direct
+endpoint=...` potwierdza bezpośrednią trasę; `route=DERP(...)` oznacza relay.
+Serwer Headscale na Renderze zapisuje szczegółowe zdarzenia koordynacji w
+Dashboard → `connect-headscale` → Logs. Te logi pokazują rejestrację i
+aktualizacje mapy, ale sam Headscale nie widzi ścieżki pakietów WireGuard —
+jej stan odczytuje się z `connect-mesh.log` po stronie klientów. Netcheck może
+zawierać publiczny adres IP; zamazuj go przed udostępnieniem logu.
+
 Na pierwszym komputerze uruchom serwer czatu (przy pierwszym uruchomieniu
 wklej jego własny jednorazowy klucz Headscale):
 

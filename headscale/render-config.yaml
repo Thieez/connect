@@ -2,6 +2,10 @@ server_url: https://connect-headscale.onrender.com
 listen_addr: 0.0.0.0:10000
 metrics_listen_addr: 127.0.0.1:9090
 
+log:
+  level: debug
+  format: text
+
 noise:
   private_key_path: /var/lib/headscale/noise_private.key
 

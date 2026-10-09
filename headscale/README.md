@@ -18,6 +18,10 @@ Headscale's embedded STUN/DERP. It still uses the public default DERP map for
 encrypted fallback, and clients can still attempt direct WireGuard connections
 to each other. If direct connectivity fails, packets go through DERP. Headscale
 and its clients do not require a paid Tailscale control-plane subscription.
+Headscale runs with debug-level text logging; inspect the service's Runtime
+Logs in the Render Dashboard for registration and network-map coordination
+events. These logs do not show the actual peer-to-peer WireGuard route; inspect
+`connect-mesh.log` on the clients for direct-versus-DERP status.
 
 The Render container automatically creates the `connect` user and two
 single-use preauth keys at startup. Find `CONNECT_DEVICE_1_AUTHKEY` and

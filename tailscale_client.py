@@ -4,12 +4,136 @@ import base64
 import ctypes
 import ipaddress
 import json
+import logging
 import os
 import shutil
 import subprocess
+import threading
 from urllib.parse import urlsplit
+from logging.handlers import RotatingFileHandler
 
 DEFAULT_HEADSCALE_URL = "https://connect-headscale.onrender.com"
+DIAGNOSTICS_INTERVAL_SECONDS = 15
+
+
+def _diagnostics_logger(log_path):
+    logger = logging.getLogger("connect.mesh")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    if not logger.handlers:
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        file_handler = RotatingFileHandler(
+            log_path,
+            maxBytes=2_000_000,
+            backupCount=2,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(formatter)
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+    return logger
+
+
+def _format_peer_routes(status, peer_address=None):
+    peers = status.get("Peer") or {}
+    if not isinstance(peers, dict):
+        return ["status contains no peer list"]
+
+    wanted = str(peer_address) if peer_address else None
+    results = []
+    for peer in peers.values():
+        if not isinstance(peer, dict):
+            continue
+        addresses = peer.get("TailscaleIPs") or []
+        if wanted and wanted not in addresses:
+            continue
+        name = peer.get("HostName") or peer.get("DNSName") or "peer"
+        current_address = peer.get("CurAddr") or ""
+        relay = peer.get("Relay") or ""
+        peer_relay = peer.get("PeerRelay") or ""
+        if current_address:
+            route = f"direct endpoint={current_address}"
+        elif peer_relay:
+            route = f"peer-relay={peer_relay}"
+        elif relay:
+            route = f"DERP({relay})"
+        else:
+            route = "route=not-established"
+        results.append(
+            f"peer={name} ips={','.join(addresses)} route={route} "
+            f"active={peer.get('Active', False)} online={peer.get('Online', False)} "
+            f"tx={peer.get('TxBytes', 0)} rx={peer.get('RxBytes', 0)}"
+        )
+    if not results and wanted:
+        return [f"peer={wanted} is not present in the Tailscale peer map"]
+    if not results:
+        return ["Tailscale peer map is empty"]
+    return results
+
+
+def _read_mesh_status(executable, peer_address=None):
+    status = json.loads(_run_tailscale(executable, "status", "--json"))
+    if not isinstance(status, dict):
+        raise RuntimeError("tailscale status returned an unexpected JSON value")
+    return status.get("BackendState", "unknown"), _format_peer_routes(
+        status, peer_address
+    )
+
+
+def _write_mesh_diagnostics(logger, executable, peer_address=None, include_netcheck=False):
+    try:
+        backend_state, routes = _read_mesh_status(executable, peer_address)
+        logger.info("Tailscale backend=%s; %s", backend_state, "; ".join(routes))
+    except (RuntimeError, json.JSONDecodeError) as error:
+        logger.error("Could not read Tailscale peer route status: %s", error)
+
+    if include_netcheck:
+        try:
+            result = subprocess.run(
+                [executable, "netcheck"],
+                capture_output=True,
+                check=False,
+                text=True,
+                timeout=20,
+            )
+            output = (result.stdout or result.stderr).strip()
+            if result.returncode:
+                logger.error("tailscale netcheck failed: %s", output)
+            else:
+                logger.info("Tailscale netcheck:\n%s", output or "(no output)")
+        except (OSError, subprocess.TimeoutExpired) as error:
+            logger.error("Could not run tailscale netcheck: %s", error)
+
+
+class MeshDiagnostics:
+    def __init__(self, executable, peer_address=None, log_path="connect-mesh.log"):
+        self.executable = executable
+        self.peer_address = peer_address
+        self.logger = _diagnostics_logger(log_path)
+        self.stopped = threading.Event()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+
+    def start(self):
+        self.logger.info(
+            "Starting mesh diagnostics; log file=%s; peer=%s",
+            os.path.abspath(self.logger.handlers[0].baseFilename),
+            self.peer_address or "all peers",
+        )
+        self.thread.start()
+
+    def stop(self):
+        self.stopped.set()
+        if self.thread.is_alive():
+            self.thread.join(timeout=2)
+
+    def _run(self):
+        _write_mesh_diagnostics(
+            self.logger, self.executable, self.peer_address, include_netcheck=True
+        )
+        while not self.stopped.wait(DIAGNOSTICS_INTERVAL_SECONDS):
+            _write_mesh_diagnostics(self.logger, self.executable, self.peer_address)
 
 
 def _find_tailscale():
@@ -121,6 +245,12 @@ def connect_to_headscale(server_url, auth_key=None):
     print(f"Połączono z Headscale: {address}")
     print("Tailscale domyślnie próbuje trasy direct; DERP pozostaje awaryjnym relayem.")
     return address
+
+
+def start_mesh_diagnostics(peer_address=None):
+    diagnostics = MeshDiagnostics(_find_tailscale(), peer_address)
+    diagnostics.start()
+    return diagnostics
 
 
 def _firewall_rule_script(port):
