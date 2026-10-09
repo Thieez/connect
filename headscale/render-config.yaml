@@ -1,0 +1,38 @@
+server_url: https://connect-headscale.onrender.com
+listen_addr: 0.0.0.0:10000
+metrics_listen_addr: 127.0.0.1:9090
+
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+# Render web services do not expose inbound UDP for embedded STUN/DERP.
+# Keep the public DERP map for encrypted fallback when direct WireGuard fails.
+derp:
+  server:
+    enabled: false
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+  paths: []
+  auto_update_enabled: true
+  update_frequency: 3h
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+    write_ahead_log: true
+
+node:
+  expiry: 0
+
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+policy:
+  mode: file
+  path: ""

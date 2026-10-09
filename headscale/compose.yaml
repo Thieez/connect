@@ -1,0 +1,41 @@
+services:
+  headscale:
+    image: ghcr.io/juanfont/headscale:0.29.4
+    command: serve
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/headscale
+    volumes:
+      - ./config.yaml:/etc/headscale/config.yaml:ro
+      - headscale-data:/var/lib/headscale
+    ports:
+      - "3478:3478/udp"
+    healthcheck:
+      test: ["CMD", "headscale", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      HEADSCALE_DOMAIN: ${HEADSCALE_DOMAIN:?Set HEADSCALE_DOMAIN in .env}
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      headscale:
+        condition: service_healthy
+
+volumes:
+  headscale-data:
+  caddy-data:
+  caddy-config:
